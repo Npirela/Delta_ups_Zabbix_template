@@ -1,0 +1,2115 @@
+zabbix_export:
+  version: '7.4'
+  template_groups:
+    - uuid: 7df96b18c230490a9a0a9e2307226338
+      name: Templates
+  templates:
+    - uuid: f5c8494739e044b2a1736e010aecedbb
+      template: 'Delta UPS SNMP QWEN ENRICHED'
+      name: 'Delta UPS SNMP QWEN ENRICHED'
+      description: |
+        ## Overview
+        
+        Simple SNMP template for Delta UPS with LLD for lines.  
+        Tested on Zabbix 7 
+        
+        
+        Required extra configuration:
+        
+        
+        Macro for {$SNMP\_COMMUNITY}  
+        UPS-MIB
+        
+        
+        
+        ## Author
+        QWEN AI Used to enhance the existing tamplate on zabbix community
+        NPIRELA
+        BASED ON TEMPLATE BY SIM
+        
+        PROVIDED HAS IT IS NO WARRANTY
+        #used Material
+        https://mibs.observium.org
+        https://mibbrowser.online
+      groups:
+        - name: Templates
+      items:
+        - uuid: 4ca9ae4bba2149789dd4e8a3e6246f3c
+          name: 'Attached Devices'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.1.6.0
+          key: dupsAttachedDevices
+          delay: '9000'
+          history: 30d
+          value_type: TEXT
+          description: 'A string identifying the devices attached to the output(s) of the UPS. This object should be set by the administrator.'
+          tags:
+            - tag: Application
+              value: 'Device Information'
+        - uuid: 065f3178a21d45729ba92fa267ed5050
+          name: 'Auto Reboot Enabled'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.2.2.0
+          key: dupsAutoReboot
+          status: DISABLED
+          description: 'In backup mode, the UPS may shutdown normally by SDA command, dry-contact remote shutdown signal or low battery shutdown. This command is used to determine the unit should restart or not next time when the power restores Enumeration: ''on'': 1, ''off'': 2.'
+          tags:
+            - tag: Application
+              value: Control
+        - uuid: d8b36bf34dbb45f396ae1a8a83fff512
+          name: 'Battery Charge Level'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.7.8.0
+          key: dupsBatteryCapacity
+          value_type: FLOAT
+          units: '%'
+          description: 'An estimate of the battery charge remaining expressed as a percent of full charge.'
+          tags:
+            - tag: Application
+              value: Battery
+          triggers:
+            - uuid: 1e92f47a222f41bc951a257ed5393866
+              expression: 'last(/Delta UPS SNMP QWEN ENRICHED/dupsBatteryCapacity)<{$BATTERY.CHARGE.CRIT}'
+              recovery_mode: RECOVERY_EXPRESSION
+              recovery_expression: 'last(/Delta UPS SNMP QWEN ENRICHED/dupsBatteryCapacity)>=({$BATTERY.CHARGE.CRIT}+5)'
+              name: '{HOST.NAME}: Battery charge < {$BATTERY.CHARGE.CRIT}%'
+              priority: DISASTER
+            - uuid: 573497a5f598413e8be1b84d29782cdf
+              expression: 'last(/Delta UPS SNMP QWEN ENRICHED/dupsBatteryCapacity)<{$BATTERY.CHARGE.WARN}'
+              recovery_mode: RECOVERY_EXPRESSION
+              recovery_expression: 'last(/Delta UPS SNMP QWEN ENRICHED/dupsBatteryCapacity)>=({$BATTERY.CHARGE.WARN}+5)'
+              name: '{HOST.NAME}: Battery charge < {$BATTERY.CHARGE.WARN}%'
+              priority: WARNING
+              manual_close: 'YES'
+              dependencies:
+                - name: '{HOST.NAME}: Battery charge < {$BATTERY.CHARGE.CRIT}%'
+                  expression: 'last(/Delta UPS SNMP QWEN ENRICHED/dupsBatteryCapacity)<{$BATTERY.CHARGE.CRIT}'
+                  recovery_expression: 'last(/Delta UPS SNMP QWEN ENRICHED/dupsBatteryCapacity)>=({$BATTERY.CHARGE.CRIT}+5)'
+        - uuid: fc15321b5eab47e7843b539c2dabc0f6
+          name: 'Battery Charge Status'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.7.3.0
+          key: dupsBatteryCharge
+          value_type: FLOAT
+          description: |
+            from  DeltaUPS-MIB
+            Enumeration: 'resting': 2, 'floating': 0, 'discharging': 3, 'charging': 1.
+          valuemap:
+            name: 'Delta Battery Charge'
+          tags:
+            - tag: Application
+              value: Battery
+        - uuid: c10fd53390ca449d96707693b98c7860
+          name: 'Battery Condition'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.7.1.0
+          key: dupsBatteryCondition
+          value_type: FLOAT
+          description: |
+            from DeltaUPS-MIB
+            
+            The indication of the capacity remaining in the UPS system's batteries when AC normal. Enumeration: 'good': 0, 'weak': 1, 'replace': 2.
+          valuemap:
+            name: 'Delta Battery Condition'
+          tags:
+            - tag: Application
+              value: Battery
+          triggers:
+            - uuid: c28241b6d2e941e197fdb44f6ab75d2f
+              expression: 'last(/Delta UPS SNMP QWEN ENRICHED/dupsBatteryCondition)=3'
+              recovery_mode: RECOVERY_EXPRESSION
+              recovery_expression: 'last(/Delta UPS SNMP QWEN ENRICHED/dupsBatteryCondition)=2'
+              name: '{HOST.NAME}: Battery condition is bad'
+              priority: HIGH
+        - uuid: 9a01d39000b242b78c8da6b0ef252159
+          name: 'Battery Current'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.7.7.0
+          key: dupsBatteryCurrent
+          value_type: FLOAT
+          units: A
+          description: |
+            from DeltaUPS-MIB
+            The present battery current in 1/10 A.
+            
+            range 0-64
+          preprocessing:
+            - type: MULTIPLIER
+              parameters:
+                - '0.1'
+          tags:
+            - tag: Application
+              value: Battery
+        - uuid: 108e1b6bb1f64357b8b970bf65e08d7b
+          name: 'Estimated Battery Runtime'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.7.5.0
+          key: dupsBatteryEstimatedTime
+          value_type: FLOAT
+          units: min
+          description: |
+            from DeltaUPS-MIB
+            Estimated time from backup to low battery shutdown.
+          tags:
+            - tag: Application
+              value: Battery
+        - uuid: 88c5a116ea234b47a301ead9ad1bb6d3
+          name: 'Battery Status'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.7.2.0
+          key: dupsBatteryStatus
+          value_type: FLOAT
+          description: |
+            from DeltaUPS-MIB
+            The indication of the capacity remaining in the UPS system's batteries when AC failed. A value of ok indicates that the remaining run-time is greater than upsConfigLowBattTime. A value of low indicates that the remaining battery run-time is less than or equal to upsConfigLowBattTime. A value of depleted indicates that the UPS will be unable to sustain the present load when and if the utility power is lost (including the possibility that the utility power is currently absent and the UPS is unable to sustain the output). 
+            
+            Enumeration: 'ok': 0, 'low': 1, 'depleted': 2.
+          valuemap:
+            name: 'Delta Battery Status'
+          tags:
+            - tag: Application
+              value: Battery
+          triggers:
+            - uuid: d65591f3ef8b4cab8f861c66c13dcb8b
+              expression: 'last(/Delta UPS SNMP QWEN ENRICHED/dupsBatteryStatus)=3'
+              recovery_mode: RECOVERY_EXPRESSION
+              recovery_expression: 'last(/Delta UPS SNMP QWEN ENRICHED/dupsBatteryStatus)=2'
+              name: '{HOST.NAME}: Battery status is low'
+              priority: HIGH
+        - uuid: 106a2855f5984666bbc6c433fa171aa0
+          name: 'Number of Bypass Lines'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.6.2.0
+          key: dupsBypassNumLines
+          delay: 3h
+          value_type: FLOAT
+          trends: '0'
+          status: DISABLED
+          description: |
+            from DeltaUPS-MIB
+            The number of bypass lines utilized in this device.
+          tags:
+            - tag: Application
+              value: Bypass
+        - uuid: 32e09bfbc99247388b634d9dc70e6a23
+          name: 'Config Buzzer Alarm State'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.3.1.0
+          key: dupsConfigBuzzerAlarm
+          delay: 4h
+          value_type: FLOAT
+          description: |
+            from DeltaUPS-MIB
+            UPS will keep silence but will alarm again when next power event is occurred Enumeration: 'alarm': 1, 'silence': 2.
+          valuemap:
+            name: 'Delta Config Buzzer Alarm'
+          tags:
+            - tag: Application
+              value: Configuration
+        - uuid: bbf278a4d1914a7896614579eec1ce3f
+          name: 'Config Buzzer State'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.3.2.0
+          key: dupsConfigBuzzerState
+          delay: 4h
+          value_type: FLOAT
+          description: |
+            from DeltaUPS-MIB
+            If it is disabled then the UPS is always muted. Enumeration: 'enable': 1, 'disable': 2.
+          valuemap:
+            name: 'Delta Config Buzzer State'
+          tags:
+            - tag: Application
+              value: Configuration
+        - uuid: 8635b7dc55e74fad859c85620ec3075f
+          name: 'Config High Voltage Transfer Point'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.3.5.0
+          key: dupsConfigHighVoltageTransferPoint
+          delay: 1h
+          units: V
+          description: |
+            from DeltaUPS-MIB
+            The maximum line voltage allowed before the UPS system transfers to battery backup.
+          tags:
+            - tag: Application
+              value: Configuration
+        - uuid: 462611daa8d646cc9970f54096cf56da
+          name: 'Config Low Voltage Transfer Point'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.3.4.0
+          key: dupsConfigLowVoltageTransferPoint
+          delay: 4h
+          value_type: FLOAT
+          units: V
+          description: |
+            from DeltaUPS-MIB
+            The minimum input line voltage allowed before the UPS system transfers to battery backup.
+          tags:
+            - tag: Application
+              value: Configuration
+        - uuid: b10bee9459694c6ba47f10e557bff583
+          name: 'Config Sensitivity'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.3.3.0
+          key: dupsConfigSensitivity
+          delay: 4h
+          value_type: FLOAT
+          description: |
+            from DeltaUPS-MIB
+            The sensitivity of the UPS to utility line abnormalities or noises. 
+            Enumeration: 'low': 2, 'reduced': 1, 'normal': 0.
+          valuemap:
+            name: 'Delta Config Sensitivity'
+          tags:
+            - tag: Application
+              value: Configuration
+        - uuid: 0ca77f3213814acc9df7932e1d382654
+          name: 'Environment Humidity'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.10.2.0
+          key: dupsEnvHumidity
+          value_type: FLOAT
+          units: '%'
+          description: |
+            from DeltaUPS-MIB
+            The environmental humidity.
+            
+            range 0-999
+          tags:
+            - tag: Application
+              value: Environment
+          triggers:
+            - uuid: 601aa551aa924083987b41624d15c3a4
+              expression: 'last(/Delta UPS SNMP QWEN ENRICHED/dupsEnvHumidity)>{$ENV.HUMIDITY.CRIT}'
+              recovery_mode: RECOVERY_EXPRESSION
+              recovery_expression: 'last(/Delta UPS SNMP QWEN ENRICHED/dupsEnvHumidity)<=({$ENV.HUMIDITY.CRIT}-5)'
+              name: '{HOST.NAME}: Environment humidity > {$ENV.HUMIDITY.CRIT}%'
+              priority: HIGH
+            - uuid: c91fddc9e59148fc90f6ddc5e75203ea
+              expression: 'last(/Delta UPS SNMP QWEN ENRICHED/dupsEnvHumidity)>{$ENV.HUMIDITY.WARN}'
+              recovery_mode: RECOVERY_EXPRESSION
+              recovery_expression: 'last(/Delta UPS SNMP QWEN ENRICHED/dupsEnvHumidity)<=({$ENV.HUMIDITY.WARN}-5)'
+              name: '{HOST.NAME}: Environment humidity > {$ENV.HUMIDITY.WARN}%'
+              priority: WARNING
+              manual_close: 'YES'
+        - uuid: 533d4247b32a47fd9bc2daa94976a2f7
+          name: 'Environment Temperature'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.10.1.0
+          key: dupsEnvTemperature
+          value_type: FLOAT
+          units: °C
+          description: |
+            from DeltaUPS-MIB
+            The ambient environmental temperature.
+            
+            range 0-64
+          tags:
+            - tag: Application
+              value: Environment
+          triggers:
+            - uuid: c0f8e1bd6ccc4ae48f04c98d673776f6
+              expression: 'last(/Delta UPS SNMP QWEN ENRICHED/dupsEnvTemperature)>{$ENV.TEMP.CRIT}'
+              recovery_mode: RECOVERY_EXPRESSION
+              recovery_expression: 'last(/Delta UPS SNMP QWEN ENRICHED/dupsEnvTemperature)<=({$ENV.TEMP.CRIT}-3)'
+              name: '{HOST.NAME}: Environment temperature > {$ENV.TEMP.CRIT}°C'
+              priority: HIGH
+            - uuid: ccd22093f2e1414db84fb0999737d90b
+              expression: 'last(/Delta UPS SNMP QWEN ENRICHED/dupsEnvTemperature)>{$ENV.TEMP.WARN}'
+              recovery_mode: RECOVERY_EXPRESSION
+              recovery_expression: 'last(/Delta UPS SNMP QWEN ENRICHED/dupsEnvTemperature)<=({$ENV.TEMP.WARN}-3)'
+              name: '{HOST.NAME}: Environment temperature > {$ENV.TEMP.WARN}°C'
+              priority: WARNING
+              manual_close: 'YES'
+        - uuid: ac3700f045b94baa99768c9bf96a18f1
+          name: 'High Transfer Voltage Lower Bound'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.1.16.0
+          key: dupsHighTransferVoltLowBound
+          delay: 1h
+          value_type: FLOAT
+          units: V
+          description: |
+            from DeltaUPS-MIB
+            The maximum input line voltage lower bound allowed before the UPS system transfers to battery backup.
+          tags:
+            - tag: Application
+              value: Rating
+        - uuid: ef49cb9e504142879ab7a5acfcaa669c
+          name: 'High Transfer Voltage Upper Bound'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.1.15.0
+          key: dupsHighTransferVoltUpBound
+          delay: 1h
+          value_type: FLOAT
+          units: V
+          description: |
+            from DeltaUPS-MIB
+            The maximum input line voltage upper bound allowed before the UPS system transfers to battery backup.
+          tags:
+            - tag: Application
+              value: Rating
+        - uuid: 3ab31ebc4e9a4014b204675033a39d6c
+          name: 'Agent Software Version'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.1.4.0
+          key: dupsIdentAgentSoftwareVersion
+          delay: '3600'
+          history: 30d
+          value_type: TEXT
+          description: 'The UPS agent software version. This variable may or may not has the same value as upsIdentUPSSoftwareVersion in some implementations.'
+          inventory_link: SOFTWARE
+          tags:
+            - tag: Application
+              value: 'Device Information'
+        - uuid: 945d830e5c5745f694740b554fdca61c
+          name: 'UPS Software Version'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.1.3.0
+          key: dupsIdentUPSSoftwareVersion
+          delay: '86400'
+          value_type: TEXT
+          description: |
+            from DeltaUPS-MIB
+            The UPS firmware/software version(s). This variable may or may not has the same value as upsIdentAgentSoftwareVersion in some implementations.
+          inventory_link: OS
+          tags:
+            - tag: Application
+              value: 'Device Information'
+        - uuid: 9b3c10c7a5f54c018b01b2f12e110220
+          name: 'Number of Input Lines'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.4.1.0
+          key: dupsInputNumLines
+          delay: 1h
+          value_type: FLOAT
+          trends: '0'
+          status: DISABLED
+          description: |
+            from DeltaUPS-MIB
+            The number of input lines utilized in this device.
+          tags:
+            - tag: Application
+              value: Input
+        - uuid: 5a8418df93ef4c72bb759bf365a920af
+          name: 'Low Transfer Voltage Lower Bound'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.1.14.0
+          key: dupsLowTransferVoltLowBound
+          delay: 1h
+          value_type: FLOAT
+          units: V
+          description: |
+            from DeltaUPS-MIB
+            The minimum input line voltage lower bound allowed before the UPS system transfers to battery backup.
+          tags:
+            - tag: Application
+              value: Rating
+        - uuid: 374ee3f0f7c044eb9c22041942ec1e86
+          name: 'Low Transfer Voltage Upper Bound'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.1.13.0
+          key: dupsLowTransferVoltUpBound
+          delay: 1h
+          value_type: FLOAT
+          units: V
+          description: |
+            from DeltaUPS-MIB
+            The minimum input line voltage upper bound allowed before the UPS system transfers to battery backup.
+          tags:
+            - tag: Application
+              value: Rating
+        - uuid: 1608ae8114a3442e9381691cb6a75dc8
+          name: 'Output Frequency'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.5.2.0
+          key: dupsOutputFrequency
+          value_type: FLOAT
+          units: Hz
+          description: |
+            from DeltaUPS-MIB
+            The present output frequency in 1/10 Hz.
+          preprocessing:
+            - type: MULTIPLIER
+              parameters:
+                - '0.1'
+          tags:
+            - tag: Application
+              value: Output
+        - uuid: 0e90fc03e3734306b041cb98c26e1ca5
+          name: 'Number of Output Lines'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.5.3.0
+          key: dupsOutputNumLines
+          delay: 1h
+          value_type: FLOAT
+          trends: '0'
+          status: DISABLED
+          description: |
+            from DeltaUPS-MIB
+            The number of output lines utilized in this device.
+          tags:
+            - tag: Application
+              value: Output
+        - uuid: ce9d2dc63d7945739965cb5e3920aa29
+          name: 'Output Power Source'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.5.1.0
+          key: dupsOutputSource
+          value_type: FLOAT
+          description: |
+            from DeltaUPS-MIB
+            The present source of output power. The enumeration none(7) indicates that there is no source of output power (and therefore no output power), for example, the system has opened the output breaker. 
+            Enumeration: 'manualBypass': 5, 'normal': 0, 'battery': 1, 'none': 7, 'other': 6, 'bypass': 2, 'boosting': 4, 'reducing': 3.
+          valuemap:
+            name: 'Delta Source Type'
+          tags:
+            - tag: Application
+              value: Output
+          triggers:
+            - uuid: 243e23779379440983e9b77dbd3a585f
+              expression: '(last(/Delta UPS SNMP QWEN ENRICHED/dupsOutputSource,#1)<>last(/Delta UPS SNMP QWEN ENRICHED/dupsOutputSource,#2))=1'
+              recovery_mode: RECOVERY_EXPRESSION
+              recovery_expression: '(last(/Delta UPS SNMP QWEN ENRICHED/dupsOutputSource,#1)<>last(/Delta UPS SNMP QWEN ENRICHED/dupsOutputSource,#2))=0'
+              name: '{HOST.NAME}: Output power source changed'
+              priority: INFO
+              manual_close: 'YES'
+        - uuid: f26ad5777b8b4937b22d74202c0df8e5
+          name: 'Rating Battery Voltage'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.1.12.0
+          key: dupsRatingBatteryVoltage
+          delay: 1h
+          value_type: FLOAT
+          units: V
+          description: |
+            from DeltaUPS-MIB 	
+            The magnitude of the nominal battery voltage rating.
+          tags:
+            - tag: Application
+              value: Rating
+        - uuid: 2e7ba503a9b34336b5aa6bed194d9657
+          name: 'Rating Input Frequency'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.1.11.0
+          key: dupsRatingInputFrequency
+          delay: 1h
+          value_type: FLOAT
+          units: Hz
+          description: |
+            from DeltaUPS-MIB 	
+            The magnitude of the nominal input frequency rating.
+          tags:
+            - tag: Application
+              value: Rating
+        - uuid: 0b8c1054bacd46babd9426efbcda5ea3
+          name: 'Rating Input Voltage'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.1.10.0
+          key: dupsRatingInputVoltage
+          delay: 1h
+          history: 60d
+          value_type: FLOAT
+          units: V
+          description: |
+            from DeltaUPS-MIB
+            The magnitude of the nominal input voltage rating.
+          tags:
+            - tag: Application
+              value: Rating
+        - uuid: 7ddc5a7fb9cd4208b911071c8c1b3496
+          name: 'Rating Output Frequency'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.1.9.0
+          key: dupsRatingOutputFrequency
+          delay: 1h
+          units: Hz
+          description: |
+            from DeltaUPS-MIB 	
+            The magnitude of the nominal output frequency rating.
+          tags:
+            - tag: Application
+              value: Rating
+        - uuid: bece6f5f00764dcca9834b13e7bb0e42
+          name: 'Rating Output Power (VA)'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.1.7.0
+          key: dupsRatingOutputVA
+          delay: 1h
+          units: VA
+          description: |
+            from DeltaUPS-MIB
+            The magnitude of the nominal output VA rating.
+          tags:
+            - tag: Application
+              value: Rating
+        - uuid: 98fac753037e4c32824d11bb2afb6c09
+          name: 'Rating Output Voltage'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.1.8.0
+          key: dupsRatingOutputVoltage
+          delay: 1h
+          history: 60d
+          value_type: FLOAT
+          units: V
+          description: |
+            from DeltaUPS-MIB 	
+            The magnitude of the nominal output voltage rating.
+          tags:
+            - tag: Application
+              value: Rating
+        - uuid: 90ce3e483c1c4d499cdc0d16453be3dc
+          name: 'Seconds on Battery'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.7.4.0
+          key: dupsSecondsOnBattery
+          value_type: FLOAT
+          units: s
+          description: |
+            from DeltaUPS-MIB
+            If the unit is on battery power, the elapsed time since the UPS last switched to battery power, or the time since the network management subsystem was last restarted, whichever is less. Zero shall be returned if the unit is not on battery power
+          tags:
+            - tag: Application
+              value: Battery
+        - uuid: 0a80c1a125454e0c999d532ccb5b167c
+          name: 'Shutdown Type'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.2.1.0
+          key: dupsShutdownType
+          history: 90d
+          value_type: FLOAT
+          status: DISABLED
+          description: |
+            from DeltaUPS-MIB
+            This object determines the nature of the action to be taken at the time when the countdown of the upsShutdownAfterDelay and upsRebootWithDuration objects reaches zero. Setting this object to output(1) indicates that shutdown requests should cause only the output of the UPS to turn off. Setting this object to system(2) indicates that shutdown requests will cause the entire UPS system to turn off. 
+            
+            Enumeration: 'output': 1, 'system': 2.
+          tags:
+            - tag: Application
+              value: Control
+        - uuid: a1a59b202c234b19b8b41fde3b9e42a3
+          name: 'Internal Temperature'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.7.9.0
+          key: dupsTemperature
+          value_type: FLOAT
+          units: °C
+          description: |
+            from DeltaUPS-MIB
+            The ambient temperature at or near the UPS Battery casing.
+          tags:
+            - tag: Application
+              value: Environment
+          triggers:
+            - uuid: 21c28ab9e89b444fb9697fb51c603d9b
+              expression: 'last(/Delta UPS SNMP QWEN ENRICHED/dupsTemperature)>{$TEMP.CRIT}'
+              recovery_mode: RECOVERY_EXPRESSION
+              recovery_expression: 'last(/Delta UPS SNMP QWEN ENRICHED/dupsTemperature)<=({$TEMP.CRIT}-2)'
+              name: '{HOST.NAME}: Internal temperature > {$TEMP.CRIT}°C'
+              priority: HIGH
+            - uuid: 4f8ff79ebc00439dbc7ec4f4224020d7
+              expression: 'last(/Delta UPS SNMP QWEN ENRICHED/dupsTemperature)>{$TEMP.WARN}'
+              recovery_mode: RECOVERY_EXPRESSION
+              recovery_expression: 'last(/Delta UPS SNMP QWEN ENRICHED/dupsTemperature)<=({$TEMP.WARN}-3)'
+              name: '{HOST.NAME}: Internal temperature > {$TEMP.WARN}°C'
+              priority: WARNING
+              manual_close: 'YES'
+        - uuid: c49edc13eb3644479b54d900de0a5bcc
+          name: 'Last Test Results Summary'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.8.2.0
+          key: dupsTestResultsSummary
+          delay: 15m
+          value_type: FLOAT
+          description: |
+            from DeltaUPS-MIB
+            The results of the current or last UPS diagnostics test performed. The values for donePass(1), generalTestFail(3), and batteryTestFail(4) indicate that the test completed either successfully, with a warning, or with an error, respectively.Tests which have not yet concluded are indicated by inProgress(2). The value noTestsInitiated(0) indicates that no previous test results are available. Enumeration: 'noTestsInitiated': 0, 'batteryTestFail': 4, 'donePass': 1, 'deepBatteryTestFail': 5, 'inProgress': 2, 'generalTestFail': 3.
+          valuemap:
+            name: 'Delta Test Results Summary'
+          tags:
+            - tag: Application
+              value: Test
+          triggers:
+            - uuid: 6d562397155240ae969e0369e51f7a3e
+              expression: 'last(/Delta UPS SNMP QWEN ENRICHED/dupsTestResultsSummary)=3'
+              recovery_mode: RECOVERY_EXPRESSION
+              recovery_expression: 'last(/Delta UPS SNMP QWEN ENRICHED/dupsTestResultsSummary)=2'
+              name: '{HOST.NAME}: Last UPS test resulted in error'
+              priority: WARNING
+              manual_close: 'YES'
+        - uuid: 329c80310bc34ef6b00e85cf1f3e9c9f
+          name: 'Scheduled Test Type'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.8.1.0
+          key: dupsTestType
+          delay: 1h
+          description: |
+            from DeltaUPS-MIB 	
+            Perform the UPS Test procedure. 
+            Enumeration: 'testUntilBattlow': 4, 'abort': 0, 'batteryTest': 2, 'testFor10sec': 3, 'generalTest': 1.
+          valuemap:
+            name: 'Delta Test Type'
+          tags:
+            - tag: Application
+              value: Test
+        - uuid: 2c507632efd94c18b6dd505632ec9c45
+          name: 'ICMP ping'
+          type: SIMPLE
+          key: icmpping
+          delay: '60'
+          history: 7d
+          valuemap:
+            name: 'Service state'
+          tags:
+            - tag: Application
+              value: ICMP
+          triggers:
+            - uuid: c1722f31e1534b93a8c2c21cc0e5d07b
+              expression: 'max(/Delta UPS SNMP QWEN ENRICHED/icmpping,#3)=0'
+              name: '{HOST.NAME} is unavailable by ICMP'
+              priority: AVERAGE
+        - uuid: 6e3446b631344734b07580f40470d856
+          name: 'ICMP loss'
+          type: SIMPLE
+          key: icmppingloss
+          delay: '60'
+          history: 7d
+          value_type: FLOAT
+          units: '%'
+          tags:
+            - tag: Application
+              value: ICMP
+          triggers:
+            - uuid: a649ba1cb15f49289c2f04d0c7aed80f
+              expression: 'min(/Delta UPS SNMP QWEN ENRICHED/icmppingloss,5m)>20'
+              name: 'Ping loss is too high on {HOST.NAME}'
+              priority: WARNING
+              dependencies:
+                - name: '{HOST.NAME} is unavailable by ICMP'
+                  expression: 'max(/Delta UPS SNMP QWEN ENRICHED/icmpping,#3)=0'
+        - uuid: ef2ea36856494085a0ebd39b173876b1
+          name: 'ICMP response time'
+          type: SIMPLE
+          key: icmppingsec
+          delay: '60'
+          history: 7d
+          value_type: FLOAT
+          units: s
+          tags:
+            - tag: Application
+              value: ICMP
+          triggers:
+            - uuid: 6e136a8c02844544ad3a56dc20a06447
+              expression: 'avg(/Delta UPS SNMP QWEN ENRICHED/icmppingsec,5m)>0.15'
+              name: 'Response time is too high on {HOST.NAME}'
+              priority: WARNING
+              dependencies:
+                - name: '{HOST.NAME} is unavailable by ICMP'
+                  expression: 'max(/Delta UPS SNMP QWEN ENRICHED/icmpping,#3)=0'
+        - uuid: 987ad3f1f303437cac86b5e256fc59e4
+          name: 'UPS Location'
+          type: SNMP_AGENT
+          snmp_oid: 'RFC1213-MIB::sysLocation.0'
+          key: sysLocation
+          delay: '7200'
+          history: 90d
+          value_type: TEXT
+          tags:
+            - tag: Application
+              value: 'Device Information'
+        - uuid: c0e696d577e947c8b10a2358a89192b8
+          name: 'UPS Name'
+          type: SNMP_AGENT
+          snmp_oid: 'RFC1213-MIB::sysName.0'
+          key: sysName
+          delay: '7200'
+          history: 90d
+          value_type: TEXT
+          inventory_link: TYPE_FULL
+          tags:
+            - tag: Application
+              value: 'Device Information'
+        - uuid: c812778bbcd446e3bdfce9efb45b2a8b
+          name: 'UPS Device uptime'
+          type: SNMP_AGENT
+          snmp_oid: 'SNMPv2-MIB::sysUpTime.0'
+          key: sysUpTime.2
+          delay: '60'
+          history: 14d
+          units: uptime
+          description: 'The time since the network management portion of the system was last re-initialized.'
+          preprocessing:
+            - type: MULTIPLIER
+              parameters:
+                - '0.01'
+          tags:
+            - tag: Application
+              value: 'Device Information'
+          triggers:
+            - uuid: 7bebd7daaff04bf1988f4675cf01275d
+              expression: 'last(/Delta UPS SNMP QWEN ENRICHED/sysUpTime.2,#1:now-1m)<5m'
+              name: '{HOST.NAME}: UPS was restarted'
+              priority: AVERAGE
+        - uuid: 54cc50a395444454b7c0d5755d5667d7
+          name: 'Battery Current Amp DC'
+          type: SNMP_AGENT
+          snmp_oid: 'UPS-MIB::upsBatteryCurrent.0'
+          key: upsBatteryCurrent
+          delay: '60'
+          history: 7d
+          units: 'Amp DC'
+          description: |
+            from UPS-MIB
+            The present battery current.
+            
+            range 0-64
+          tags:
+            - tag: Application
+              value: Battery
+        - uuid: f0e4edabb4d244c09793ef28c1fd73ea
+          name: 'UPS Battery Status'
+          type: SNMP_AGENT
+          snmp_oid: 'UPS-MIB::upsBatteryStatus.0'
+          key: upsBatteryStatus
+          delay: '60'
+          history: 14d
+          value_type: FLOAT
+          description: |
+            from UPS-MIB
+            The indication of the capacity remaining in the UPS system's batteries. A value of batteryNormal indicates that the remaining run-time is greater than upsConfigLowBattTime. A value of batteryLow indicates that the remaining battery run-time is less than or equal to upsConfigLowBattTime. A value of batteryDepleted indicates that the UPS will be unable to sustain the present load when and if the utility power is lost (including the possibility that the utility power is currently absent and the UPS is unable to sustain the output). 
+            Enumeration: 
+            'unknown': 1,
+            'batteryNormal': 2, 
+            'batteryDepleted': 4, 
+            'batteryLow': 3.
+          valuemap:
+            name: 'Delta Battery Status'
+          tags:
+            - tag: Application
+              value: Battery
+          triggers:
+            - uuid: 3eb6ab5e16de4d81be52e7603e954678
+              expression: '(last(/Delta UPS SNMP QWEN ENRICHED/upsBatteryStatus,#1)<>last(/Delta UPS SNMP QWEN ENRICHED/upsBatteryStatus,#2)) = 1'
+              name: '{HOST.NAME}: UPS Battery Status was changed'
+              priority: AVERAGE
+        - uuid: 94a2415c79534c62b69b752468a43cf6
+          name: 'UPS Battery Voltage'
+          type: SNMP_AGENT
+          snmp_oid: 'UPS-MIB::upsBatteryVoltage.0'
+          key: upsBatteryVoltage
+          delay: '60'
+          history: 7d
+          units: 'Volt DC'
+          description: |
+            from UPS-MIB
+            The magnitude of the present battery voltage.
+          tags:
+            - tag: Application
+              value: Battery
+        - uuid: 0f7744345bce4535ada5d7eed6555e3d
+          name: 'Number of Bypass Lines'
+          type: SNMP_AGENT
+          snmp_oid: 'UPS-MIB::upsBypassNumLines.0'
+          key: upsBypassNumLines
+          delay: '7200'
+          history: 7d
+          description: |
+            from DeltaUPS-MIB
+            The number of bypass lines utilized in this device. This entry indicates the number of rows in the bypass table.
+          tags:
+            - tag: Application
+              value: BypassLine
+        - uuid: a78600c288b4491897ee19037a465c47
+          name: 'Config Input Frequency'
+          type: SNMP_AGENT
+          snmp_oid: 'UPS-MIB::upsConfigInputFreq.0'
+          key: upsConfigInputFreq
+          delay: '60'
+          history: 7d
+          units: Hertz
+          description: |
+            from UPS-MIB
+            The nominal input frequency. On those systems which support read-write access to this object, if there is an attempt to set this variable to a value that is not supported, the request must be rejected and the agent shall respond with an appropriate error message, i.e., badValue for SNMPv1, or inconsistentValue for SNMPv2.
+          tags:
+            - tag: Application
+              value: InputLine
+        - uuid: 9064663b9cfd47558b042a36159dc898
+          name: 'Config Input Voltage'
+          type: SNMP_AGENT
+          snmp_oid: 'UPS-MIB::upsConfigInputVoltage.0'
+          key: upsConfigInputVoltage
+          delay: '60'
+          history: 7d
+          units: 'RMS Volts'
+          description: |
+            from UPS-MIB
+            The magnitude of the nominal input voltage. On those systems which support read-write access to this object, if there is an attempt to set this variable to a value that is not supported, the request must be rejected and the agent shall respond with an appropriate error message, i.e., badValue for SNMPv1, or inconsistentValue for SNMPv2.
+          tags:
+            - tag: Application
+              value: InputLine
+        - uuid: e8fb46ca4f3c4bc4adb3e198c2e2755c
+          name: 'Config Output Frequency'
+          type: SNMP_AGENT
+          snmp_oid: 'UPS-MIB::upsConfigOutputFreq.0'
+          key: upsConfigOutputFreq
+          delay: '60'
+          history: 7d
+          units: Hertz
+          description: |
+            from UPS-MIB
+            The nominal output frequency. On those systems which support read-write access to this object, if there is an attempt to set this variable to a value that is not supported, the request must be rejected and the agent shall respond with an appropriate error message, i.e., badValue for SNMPv1, or inconsistentValue for SNMPv2.
+          tags:
+            - tag: Application
+              value: OutputLine
+        - uuid: 9136df9225464480802cb44518dc5d6d
+          name: 'Config Output V-A'
+          type: SNMP_AGENT
+          snmp_oid: 'UPS-MIB::upsConfigOutputVA.0'
+          key: upsConfigOutputVA
+          delay: '60'
+          history: 7d
+          units: Volt-Amps
+          description: |
+            from UPS-MIB
+            The magnitude of the nominal Volt-Amp rating.
+          tags:
+            - tag: Application
+              value: OutputLine
+        - uuid: 5058d3321c4f4d71a8216753741da628
+          name: 'Config Output Voltage'
+          type: SNMP_AGENT
+          snmp_oid: 'UPS-MIB::upsConfigOutputVoltage.0'
+          key: upsConfigOutputVoltage
+          delay: '60'
+          history: 7d
+          units: 'RMS Volts'
+          description: |
+            from UPS-MIB
+            The magnitude of the nominal output voltage. On those systems which support read-write access to this object, if there is an attempt to set this variable to a value that is not supported, the request must be rejected and the agent shall respond with an appropriate error message, i.e., badValue for SNMPv1, or inconsistentValue for SNMPv2.
+          tags:
+            - tag: Application
+              value: OutputLine
+        - uuid: d8616da6458741bebee53a8d149f7a64
+          name: 'Battery Charge Level in %'
+          type: SNMP_AGENT
+          snmp_oid: 'UPS-MIB::upsEstimatedChargeRemaining.0'
+          key: upsEstimatedChargeRemaining
+          delay: '30'
+          history: 30d
+          value_type: FLOAT
+          units: '%'
+          description: |
+            from:UPS-MIB
+            An estimate of the battery charge remaining expressed as a percent of full charge.
+          tags:
+            - tag: Application
+              value: Battery
+          triggers:
+            - uuid: 45d3faf4a6c747f8be0a7416d96d734c
+              expression: 'last(/Delta UPS SNMP QWEN ENRICHED/upsEstimatedChargeRemaining)<10'
+              name: '{HOST.NAME}: UPS Battery Charge Level < 10%'
+              priority: DISASTER
+            - uuid: 9357734369784f94b1670e43edb49ff4
+              expression: 'last(/Delta UPS SNMP QWEN ENRICHED/upsEstimatedChargeRemaining)<50'
+              name: '{HOST.NAME}: UPS Battery Charge Level < 50%'
+              priority: HIGH
+              description: '{HOST.NAME}: UPS Battery Charge Level < 50%'
+            - uuid: cc9dfc6908c04c838496de8bf440c931
+              expression: 'last(/Delta UPS SNMP QWEN ENRICHED/upsEstimatedChargeRemaining)<90'
+              name: '{HOST.NAME}: UPS Battery Charge Level < 90%'
+              priority: AVERAGE
+            - uuid: 399b140ef44b4fb8a382cfffa1ef69ed
+              expression: 'change(/Delta UPS SNMP QWEN ENRICHED/upsEstimatedChargeRemaining)>5'
+              name: '{HOST.NAME}: UPS Battery Charge Level was changed'
+              priority: AVERAGE
+        - uuid: ce1e23c7911b48be9f1562708cd267c4
+          name: 'UPS Manufacturer'
+          type: SNMP_AGENT
+          snmp_oid: 'RFC1213-MIB::mib-2.33.1.1.1.0'
+          key: upsIdentManufacturer
+          delay: '7200'
+          history: 90d
+          value_type: TEXT
+          inventory_link: VENDOR
+          tags:
+            - tag: Application
+              value: 'Device Information'
+        - uuid: 0d1aec90010843bfae815c9de9dbb7bc
+          name: 'UPS Model'
+          type: SNMP_AGENT
+          snmp_oid: 'RFC1213-MIB::mib-2.33.1.1.2.0'
+          key: upsIdentModel
+          delay: '7200'
+          history: 90d
+          value_type: TEXT
+          inventory_link: TYPE
+          tags:
+            - tag: Application
+              value: 'Device Information'
+        - uuid: caea713153c949028169f4cd5fcad214
+          name: 'Number of Input Lines'
+          type: SNMP_AGENT
+          snmp_oid: 'UPS-MIB::upsInputNumLines.0'
+          key: upsInputNumLines
+          delay: '7200'
+          history: 7d
+          description: |
+            from UPS-MIB
+            The number of input lines utilized in this device. This variable indicates the number of rows in the input table.
+          tags:
+            - tag: Application
+              value: InputLine
+        - uuid: cd0ac00271b74288a22bd2801ad08554
+          name: 'Number of Output Lines'
+          type: SNMP_AGENT
+          snmp_oid: 'UPS-MIB::upsOutputNumLines.0'
+          key: upsOutputNumLines
+          delay: '7200'
+          history: 7d
+          description: |
+            from UPS-MIB
+            The number of output lines utilized in this device. This variable indicates the number of rows in the output table.
+          tags:
+            - tag: Application
+              value: OutputLine
+        - uuid: cc5ab1e357724ad1bfeef1cd0e815a68
+          name: 'UPS Source Type'
+          type: SNMP_AGENT
+          snmp_oid: 'UPS-MIB::upsOutputSource.0'
+          key: upsOutputSource
+          delay: '30'
+          history: 90d
+          value_type: FLOAT
+          description: |
+            from UPS-MIB
+            The present source of output power. The enumeration none(2) indicates that there is no source of output power (and therefore no output power), for example, the system has opened the output breaker. Enumeration: 'none': 2, 'normal': 3, 'battery': 5, 'reducer': 7, 'other': 1, 'bypass': 4, 'booster': 6.
+            
+                    other(1),
+                    none(2),
+                    normal(3),
+                    bypass(4),
+                    battery(5),
+                    booster(6),
+                    reducer(7)
+          valuemap:
+            name: 'Delta Source Type'
+          tags:
+            - tag: Application
+              value: 'Device Information'
+          triggers:
+            - uuid: 78c0901c13ab4ea98c457339a575aca1
+              expression: '(last(/Delta UPS SNMP QWEN ENRICHED/upsOutputSource,#1)<>last(/Delta UPS SNMP QWEN ENRICHED/upsOutputSource,#2)) = 1'
+              name: '{HOST.NAME}: UPS Power Source Type was changed'
+              priority: HIGH
+              type: MULTIPLE
+      discovery_rules:
+        - uuid: ee68c99718d4491eab441fb2531bfcd7
+          name: 'Bypass Line Discovery'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.6.2.0
+          key: dupsBypassLineDiscovery
+          delay: 1h
+          item_prototypes:
+            - uuid: 786e88e2b23f4fc9aff038af35715492
+              name: 'Bypass Current (Line {#SNMPINDEX})'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.2254.2.4.6.4.{#SNMPINDEX}'
+              key: 'dupsBypassCurrent.[{#SNMPINDEX}]'
+              value_type: FLOAT
+              units: A
+              tags:
+                - tag: Application
+                  value: BypassLine
+            - uuid: 684dfb055cdd44f78d412a3972f7e9ce
+              name: 'Bypass Current 2 (Line {#SNMPINDEX})'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.2254.2.4.6.7.{#SNMPINDEX}'
+              key: 'dupsBypassCurrent2.[{#SNMPINDEX}]'
+              value_type: FLOAT
+              units: A
+              tags:
+                - tag: Application
+                  value: BypassLine
+            - uuid: d1d909a34eeb457dad9630e80229dc20
+              name: 'Bypass Current 3 (Line {#SNMPINDEX})'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.2254.2.4.6.10.{#SNMPINDEX}'
+              key: 'dupsBypassCurrent3.[{#SNMPINDEX}]'
+              value_type: FLOAT
+              units: A
+              tags:
+                - tag: Application
+                  value: BypassLine
+            - uuid: 1456b14ad45446169b97515a3a449231
+              name: 'Bypass Frequency (Line {#SNMPINDEX})'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.2254.2.4.6.1.{#SNMPINDEX}'
+              key: 'dupsBypassFrequency.[{#SNMPINDEX}]'
+              value_type: FLOAT
+              units: Hz
+              preprocessing:
+                - type: MULTIPLIER
+                  parameters:
+                    - '0.1'
+              tags:
+                - tag: Application
+                  value: BypassLine
+            - uuid: 52602832f64d4eda9aff81d8bd3b8f3d
+              name: 'Bypass Power (Line {#SNMPINDEX})'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.2254.2.4.6.5.{#SNMPINDEX}'
+              key: 'dupsBypassPower.[{#SNMPINDEX}]'
+              value_type: FLOAT
+              units: W
+              tags:
+                - tag: Application
+                  value: BypassLine
+            - uuid: 2d0b88640d514647ac65c30676a4b9da
+              name: 'Bypass Power 2 (Line {#SNMPINDEX})'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.2254.2.4.6.8.{#SNMPINDEX}'
+              key: 'dupsBypassPower2.[{#SNMPINDEX}]'
+              value_type: FLOAT
+              units: W
+              tags:
+                - tag: Application
+                  value: BypassLine
+            - uuid: 8707c68db4614bccba23adef2caaa922
+              name: 'Bypass Power 3 (Line {#SNMPINDEX})'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.2254.2.4.6.11.{#SNMPINDEX}'
+              key: 'dupsBypassPower3.[{#SNMPINDEX}]'
+              value_type: FLOAT
+              units: W
+              tags:
+                - tag: Application
+                  value: BypassLine
+            - uuid: c22f0fe3027a48aba0e6e0eaabf460a9
+              name: 'Bypass Voltage (Line {#SNMPINDEX})'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.2254.2.4.6.3.{#SNMPINDEX}'
+              key: 'dupsBypassVoltage.[{#SNMPINDEX}]'
+              value_type: FLOAT
+              units: V
+              tags:
+                - tag: Application
+                  value: BypassLine
+              trigger_prototypes:
+                - uuid: 4c6faca38783412f8eeeb97ce214cc8e
+                  expression: 'last(/Delta UPS SNMP QWEN ENRICHED/dupsBypassVoltage.[{#SNMPINDEX}])>{$BYPASS.VOLTAGE.HIGH.WARN}'
+                  recovery_mode: RECOVERY_EXPRESSION
+                  recovery_expression: 'last(/Delta UPS SNMP QWEN ENRICHED/dupsBypassVoltage.[{#SNMPINDEX}])<=({$BYPASS.VOLTAGE.HIGH.WARN}-5)'
+                  name: '{HOST.NAME}: Bypass voltage (Line {#SNMPINDEX}) is too high'
+                  priority: WARNING
+                  manual_close: 'YES'
+                - uuid: 799c8b7d0fa647b097381a1892221a54
+                  expression: 'last(/Delta UPS SNMP QWEN ENRICHED/dupsBypassVoltage.[{#SNMPINDEX}])<{$BYPASS.VOLTAGE.LOW.WARN}'
+                  recovery_mode: RECOVERY_EXPRESSION
+                  recovery_expression: 'last(/Delta UPS SNMP QWEN ENRICHED/dupsBypassVoltage.[{#SNMPINDEX}])>=({$BYPASS.VOLTAGE.LOW.WARN}+5)'
+                  name: '{HOST.NAME}: Bypass voltage (Line {#SNMPINDEX}) is too low'
+                  priority: WARNING
+                  manual_close: 'YES'
+            - uuid: a0df0a6f8374495197d923d82c75e11e
+              name: 'Bypass Voltage 2 (Line {#SNMPINDEX})'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.2254.2.4.6.6.{#SNMPINDEX}'
+              key: 'dupsBypassVoltage2.[{#SNMPINDEX}]'
+              value_type: FLOAT
+              units: V
+              tags:
+                - tag: Application
+                  value: BypassLine
+            - uuid: e20eee887e1c44f4be376b111b3e448d
+              name: 'Bypass Voltage 3 (Line {#SNMPINDEX})'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.2254.2.4.6.9.{#SNMPINDEX}'
+              key: 'dupsBypassVoltage3.[{#SNMPINDEX}]'
+              value_type: FLOAT
+              units: V
+              tags:
+                - tag: Application
+                  value: BypassLine
+        - uuid: 140c1cd353c344029464dcbc1edb2780
+          name: 'Input Line Discovery'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.4.1.0
+          key: dupsInputLineDiscovery
+          delay: 4h
+          lifetime: 15d
+          item_prototypes:
+            - uuid: 17c1ef251df54f5b8f6ed6cb35e3d8b6
+              name: 'Input Current (Line {#SNMPINDEX})'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.2254.2.4.4.4.{#SNMPINDEX}'
+              key: 'dupsInputCurrent.[{#SNMPINDEX}]'
+              value_type: FLOAT
+              units: A
+              tags:
+                - tag: Application
+                  value: InputLine
+            - uuid: 655208d2b88f44ce951924e087abaf68
+              name: 'Input Current 2 (Line {#SNMPINDEX})'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.2254.2.4.4.7.{#SNMPINDEX}'
+              key: 'dupsInputCurrent2.[{#SNMPINDEX}]'
+              value_type: FLOAT
+              units: A
+              tags:
+                - tag: Application
+                  value: InputLine
+            - uuid: a2a1207ce84842bcb047c4a629c7d6f2
+              name: 'Input Current 3 (Line {#SNMPINDEX})'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.2254.2.4.4.10.{#SNMPINDEX}'
+              key: 'dupsInputCurrent3.[{#SNMPINDEX}]'
+              value_type: FLOAT
+              units: A
+              tags:
+                - tag: Application
+                  value: InputLine
+            - uuid: 3b0eaeafb29f477b815cd7ffefd13710
+              name: 'Input Frequency (Line {#SNMPINDEX})'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.2254.2.4.4.2.{#SNMPINDEX}'
+              key: 'dupsInputFrequency.[{#SNMPINDEX}]'
+              value_type: FLOAT
+              units: Hz
+              tags:
+                - tag: Application
+                  value: InputLine
+            - uuid: 154530d0337d45588881cc385dfca91a
+              name: 'Input Frequency 2 (Line {#SNMPINDEX})'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.2254.2.4.4.5.{#SNMPINDEX}'
+              key: 'dupsInputFrequency2.[{#SNMPINDEX}]'
+              value_type: FLOAT
+              units: Hz
+              tags:
+                - tag: Application
+                  value: InputLine
+            - uuid: 4252d9fe7e9242a19855f7cf2d76da6a
+              name: 'Input Frequency 3 (Line {#SNMPINDEX})'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.2254.2.4.4.8.{#SNMPINDEX}'
+              key: 'dupsInputFrequency3.[{#SNMPINDEX}]'
+              value_type: FLOAT
+              units: Hz
+              tags:
+                - tag: Application
+                  value: InputLine
+            - uuid: 8e2cc4d19a374f4ea311143fb771467a
+              name: 'Input Voltage (Line {#SNMPINDEX})'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.2254.2.4.4.3.{#SNMPINDEX}'
+              key: 'dupsInputVoltage.[{#SNMPINDEX}]'
+              value_type: FLOAT
+              units: V
+              tags:
+                - tag: Application
+                  value: InputLine
+              trigger_prototypes:
+                - uuid: f644fd567674408fb5c16237c93ca9da
+                  expression: 'last(/Delta UPS SNMP QWEN ENRICHED/dupsInputVoltage.[{#SNMPINDEX}])>{$INPUT.VOLTAGE.HIGH.WARN}'
+                  recovery_mode: RECOVERY_EXPRESSION
+                  recovery_expression: 'last(/Delta UPS SNMP QWEN ENRICHED/dupsInputVoltage.[{#SNMPINDEX}])<=({$INPUT.VOLTAGE.HIGH.WARN}-5)'
+                  name: '{HOST.NAME}: Input voltage (Line {#SNMPINDEX}) is too high'
+                  priority: WARNING
+                - uuid: ff147b2ad97d41a59ade3cf86eb9d85d
+                  expression: 'last(/Delta UPS SNMP QWEN ENRICHED/dupsInputVoltage.[{#SNMPINDEX}])<{$INPUT.VOLTAGE.LOW.WARN}'
+                  recovery_mode: RECOVERY_EXPRESSION
+                  recovery_expression: 'last(/Delta UPS SNMP QWEN ENRICHED/dupsInputVoltage.[{#SNMPINDEX}])>=({$INPUT.VOLTAGE.LOW.WARN}+5)'
+                  name: '{HOST.NAME}: Input voltage (Line {#SNMPINDEX}) is too low'
+                  priority: WARNING
+                  manual_close: 'YES'
+            - uuid: e66cb287de7f4b0a8402b0637efbf98d
+              name: 'Input Voltage 2 (Line {#SNMPINDEX})'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.2254.2.4.4.6.{#SNMPINDEX}'
+              key: 'dupsInputVoltage2.[{#SNMPINDEX}]'
+              value_type: FLOAT
+              units: V
+              tags:
+                - tag: Application
+                  value: InputLine
+            - uuid: 7244c01e7fc948bba7411d4c01d7133a
+              name: 'Input Voltage 3 (Line {#SNMPINDEX})'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.2254.2.4.4.9.{#SNMPINDEX}'
+              key: 'dupsInputVoltage3.[{#SNMPINDEX}]'
+              value_type: FLOAT
+              units: V
+              tags:
+                - tag: Application
+                  value: InputLine
+        - uuid: aa609668dd1a4035a6b0be2f4e9906c8
+          name: 'Output Line Discovery'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.2254.2.4.5.3.0
+          key: dupsOutputLineDiscovery
+          delay: 4h
+          lifetime: 15d
+          item_prototypes:
+            - uuid: 61ac3f1393664eb581183f44367af61d
+              name: 'Output Current (Line {#SNMPINDEX})'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.2254.2.4.5.5.{#SNMPINDEX}'
+              key: 'dupsOutputCurrent.[{#SNMPINDEX}]'
+              value_type: FLOAT
+              units: A
+              tags:
+                - tag: Application
+                  value: OutputLine
+            - uuid: 11465468a7644c7e8ec41914d4b90e5f
+              name: 'Output Current 2 (Line {#SNMPINDEX})'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.2254.2.4.5.9.{#SNMPINDEX}'
+              key: 'dupsOutputCurrent2.[{#SNMPINDEX}]'
+              value_type: FLOAT
+              units: A
+              tags:
+                - tag: Application
+                  value: OutputLine
+            - uuid: 55affa56adcc4175aa5f1ed9363c5368
+              name: 'Output Current 3 (Line {#SNMPINDEX})'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.2254.2.4.5.13.{#SNMPINDEX}'
+              key: 'dupsOutputCurrent3.[{#SNMPINDEX}]'
+              units: A
+              tags:
+                - tag: Application
+                  value: OutputLine
+            - uuid: 6ddabdc0968644c1990ad29eb78d9b6f
+              name: 'Output Load (Line {#SNMPINDEX})'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.2254.2.4.5.7.{#SNMPINDEX}'
+              key: 'dupsOutputLoad.[{#SNMPINDEX}]'
+              units: '%'
+              tags:
+                - tag: Application
+                  value: OutputLine
+              trigger_prototypes:
+                - uuid: c919fe1d1a634d15b4a3c50125d9797c
+                  expression: 'avg(/Delta UPS SNMP QWEN ENRICHED/dupsOutputLoad.[{#SNMPINDEX}],5m)>{$OUTPUT.LOAD.HIGH}'
+                  recovery_mode: RECOVERY_EXPRESSION
+                  recovery_expression: 'avg(/Delta UPS SNMP QWEN ENRICHED/dupsOutputLoad.[{#SNMPINDEX}],5m)<=({$OUTPUT.LOAD.HIGH}-5)'
+                  name: '{HOST.NAME}: Line {#SNMPINDEX} load > {$OUTPUT.LOAD.HIGH}%'
+                  priority: HIGH
+                - uuid: 601c6765734c4c479d71a53671d10936
+                  expression: 'avg(/Delta UPS SNMP QWEN ENRICHED/dupsOutputLoad.[{#SNMPINDEX}],5m)>{$OUTPUT.LOAD.MED}'
+                  recovery_mode: RECOVERY_EXPRESSION
+                  recovery_expression: 'avg(/Delta UPS SNMP QWEN ENRICHED/dupsOutputLoad.[{#SNMPINDEX}],5m)<=({$OUTPUT.LOAD.MED}-5)'
+                  name: '{HOST.NAME}: Line {#SNMPINDEX} load > {$OUTPUT.LOAD.MED}%'
+                  priority: WARNING
+                  manual_close: 'YES'
+            - uuid: e6075841025845429c87381634700591
+              name: 'Output Load 2 (Line {#SNMPINDEX})'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.2254.2.4.5.11.{#SNMPINDEX}'
+              key: 'dupsOutputLoad2.[{#SNMPINDEX}]'
+              value_type: FLOAT
+              units: '%'
+              tags:
+                - tag: Application
+                  value: OutputLine
+            - uuid: 0233405a96ec4446af09c39fb09b8164
+              name: 'Output Load 3 (Line {#SNMPINDEX})'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.2254.2.4.5.15.{#SNMPINDEX}'
+              key: 'dupsOutputLoad3.[{#SNMPINDEX}]'
+              value_type: FLOAT
+              units: '%'
+              tags:
+                - tag: Application
+                  value: OutputLine
+            - uuid: 5f54672fcb7942e3bdc41f23c3e8a0e4
+              name: 'Output Power (Line {#SNMPINDEX})'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.2254.2.4.5.6.{#SNMPINDEX}'
+              key: 'dupsOutputPower.[{#SNMPINDEX}]'
+              value_type: FLOAT
+              units: W
+              tags:
+                - tag: Application
+                  value: OutputLine
+            - uuid: c3c206725a7c4bc39818d544e7be3884
+              name: 'Output Power 2 (Line {#SNMPINDEX})'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.2254.2.4.5.10.{#SNMPINDEX}'
+              key: 'dupsOutputPower2.[{#SNMPINDEX}]'
+              value_type: FLOAT
+              units: W
+              tags:
+                - tag: Application
+                  value: OutputLine
+            - uuid: abc71f3749f8450a91b97b98a8e516af
+              name: 'Output Power 3 (Line {#SNMPINDEX})'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.2254.2.4.5.14.{#SNMPINDEX}'
+              key: 'dupsOutputPower3.[{#SNMPINDEX}]'
+              value_type: FLOAT
+              units: W
+              tags:
+                - tag: Application
+                  value: OutputLine
+            - uuid: 724bfa26a6c84e7aaa5525c244293aa3
+              name: 'Output Voltage (Line {#SNMPINDEX})'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.2254.2.4.5.4.{#SNMPINDEX}'
+              key: 'dupsOutputVoltage.[{#SNMPINDEX}]'
+              delay: 15m
+              value_type: FLOAT
+              units: V
+              tags:
+                - tag: Application
+                  value: OutputLine
+              trigger_prototypes:
+                - uuid: 3baf01bb94da458092122aae6291bfcb
+                  expression: 'last(/Delta UPS SNMP QWEN ENRICHED/dupsOutputVoltage.[{#SNMPINDEX}])>{$OUTPUT.VOLTAGE.HIGH.WARN}'
+                  recovery_mode: RECOVERY_EXPRESSION
+                  recovery_expression: 'last(/Delta UPS SNMP QWEN ENRICHED/dupsOutputVoltage.[{#SNMPINDEX}])<=({$OUTPUT.VOLTAGE.HIGH.WARN}-5)'
+                  name: '{HOST.NAME}: Output voltage (Line {#SNMPINDEX}) is too high'
+                  priority: WARNING
+                - uuid: c3efd66057a442b9ad29d5d4689460a3
+                  expression: 'last(/Delta UPS SNMP QWEN ENRICHED/dupsOutputVoltage.[{#SNMPINDEX}])<{$OUTPUT.VOLTAGE.LOW.WARN}'
+                  recovery_mode: RECOVERY_EXPRESSION
+                  recovery_expression: 'last(/Delta UPS SNMP QWEN ENRICHED/dupsOutputVoltage.[{#SNMPINDEX}])>=({$OUTPUT.VOLTAGE.LOW.WARN}+5)'
+                  name: '{HOST.NAME}: Output voltage (Line {#SNMPINDEX}) is too low'
+                  priority: WARNING
+            - uuid: eb4505dfc38e4dcbb27c4bda80a24e71
+              name: 'Output Voltage 2 (Line {#SNMPINDEX})'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.2254.2.4.5.8.{#SNMPINDEX}'
+              key: 'dupsOutputVoltage2.[{#SNMPINDEX}]'
+              value_type: FLOAT
+              units: V
+              tags:
+                - tag: Application
+                  value: OutputLine
+            - uuid: 037b13b1d75d4686b3280bd9fe732a8a
+              name: 'Output Voltage 3 (Line {#SNMPINDEX})'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.2254.2.4.5.12.{#SNMPINDEX}'
+              key: 'dupsOutputVoltage3.[{#SNMPINDEX}]'
+              value_type: FLOAT
+              units: V
+              tags:
+                - tag: Application
+                  value: OutputLine
+        - uuid: d4800586073c47f29eb848814a97f97c
+          name: 'UPS Bypass Line Discovery'
+          type: SNMP_AGENT
+          snmp_oid: 'discovery[{#SNMPVALUE},UPS-MIB::upsBypassLineIndex]'
+          key: UPSBypassLineDiscovery
+          delay: '7200'
+          lifetime: 30d
+          enabled_lifetime_type: DISABLE_NEVER
+          item_prototypes:
+            - uuid: b351b37eebbb40d89a9745cf39d4adc2
+              name: 'UPS Line {#SNMPINDEX} Bypass Voltage'
+              type: SNMP_AGENT
+              snmp_oid: 'UPS-MIB::upsBypassVoltage.{#SNMPVALUE}.0'
+              key: 'upsBypassVoltage.[{#SNMPVALUE}]'
+              delay: '60'
+              units: 'RMS Volts'
+              tags:
+                - tag: Application
+                  value: BypassLine
+        - uuid: 3fe00149362a4cd6acbb1b5631d51dae
+          name: 'UPS Input Line Discovery'
+          type: SNMP_AGENT
+          snmp_oid: 'discovery[{#SNMPVALUE},UPS-MIB::upsInputLineIndex]'
+          key: UPSInputLineDiscovery
+          delay: '7200'
+          lifetime: 30d
+          enabled_lifetime_type: DISABLE_NEVER
+          item_prototypes:
+            - uuid: 7a96a264c79b43fa8230c63b033fcd9e
+              name: 'UPS Input {#SNMPINDEX} Current'
+              type: SNMP_AGENT
+              snmp_oid: 'UPS-MIB::upsInputCurrent.{#SNMPVALUE}.0'
+              key: 'upsInputCurrent.[{#SNMPVALUE}]'
+              delay: '60'
+              history: 14d
+              units: 'RMS Amp'
+              tags:
+                - tag: Application
+                  value: InputLine
+            - uuid: d7da087aa71b4a268c299dc2a6aca540
+              name: 'UPS Input {#SNMPINDEX} Frequency'
+              type: SNMP_AGENT
+              snmp_oid: 'UPS-MIB::upsInputFrequency.{#SNMPVALUE}.0'
+              key: 'upsInputFrequency.[{#SNMPVALUE}]'
+              delay: '60'
+              history: 14d
+              units: Hertz
+              tags:
+                - tag: Application
+                  value: InputLine
+            - uuid: 560c523ab7024e35827867210af0f8f3
+              name: 'UPS Input {#SNMPINDEX} Voltage'
+              type: SNMP_AGENT
+              snmp_oid: 'UPS-MIB::upsInputVoltage.{#SNMPVALUE}.0'
+              key: 'upsInputVoltage.[{#SNMPVALUE}]'
+              delay: '60'
+              history: 14d
+              units: Hertz
+              tags:
+                - tag: Application
+                  value: InputLine
+        - uuid: 78c3af8ace48446b8aa9ba429de30ed1
+          name: 'UPS Output Line Discovery'
+          type: SNMP_AGENT
+          snmp_oid: 'discovery[{#SNMPVALUE},UPS-MIB::upsOutputLineIndex]'
+          key: UPSOutputLineDiscovery
+          delay: '7200'
+          lifetime: 30d
+          enabled_lifetime_type: DISABLE_NEVER
+          item_prototypes:
+            - uuid: 304a0901d2c14e339375d9a19c04c355
+              name: 'UPS Line {#SNMPINDEX} Output Voltage'
+              type: SNMP_AGENT
+              snmp_oid: 'UPS-MIB::upsOutputCurrent.{#SNMPVALUE}.0'
+              key: 'upsOutputCurrent.[{#SNMPVALUE}]'
+              delay: '60'
+              history: 14d
+              value_type: FLOAT
+              units: 'RMS Volts'
+              tags:
+                - tag: Application
+                  value: OutputLine
+            - uuid: 9cac3ece2ce5489894b21b38de8c1182
+              name: 'UPS Line {#SNMPINDEX} Output Percent Load'
+              type: SNMP_AGENT
+              snmp_oid: 'UPS-MIB::upsOutputPercentLoad.{#SNMPVALUE}.0'
+              key: 'upsOutputPercentLoad.[{#SNMPVALUE}]'
+              delay: '60'
+              history: 14d
+              value_type: FLOAT
+              units: '%'
+              tags:
+                - tag: Application
+                  value: OutputLine
+              trigger_prototypes:
+                - uuid: 581d57b679fe4ab3a095938536650aff
+                  expression: 'avg(/Delta UPS SNMP QWEN ENRICHED/upsOutputPercentLoad.[{#SNMPVALUE}],5m)>60'
+                  name: '{HOST.NAME}: Line {#SNMPINDEX} load is greater than  > 60%'
+                  priority: AVERAGE
+                - uuid: 72ff443691c44b44bdd38692fc6f5e9a
+                  expression: 'avg(/Delta UPS SNMP QWEN ENRICHED/upsOutputPercentLoad.[{#SNMPVALUE}],5m)>80'
+                  name: '{HOST.NAME}: Line {#SNMPINDEX} load is greater than  > 80%'
+                  priority: HIGH
+            - uuid: 3461fb187e914156a3f3315a37a9e47e
+              name: 'UPS Line {#SNMPINDEX} Output Power'
+              type: SNMP_AGENT
+              snmp_oid: 'UPS-MIB::upsOutputPower.{#SNMPVALUE}.0'
+              key: 'upsOutputPower.[{#SNMPVALUE}]'
+              delay: '60'
+              history: 14d
+              value_type: FLOAT
+              units: Watts
+              tags:
+                - tag: Application
+                  value: OutputLine
+            - uuid: a30af0ca1b1c49c899f3fdf286559c44
+              name: 'UPS Line {#SNMPINDEX} Output Current'
+              type: SNMP_AGENT
+              snmp_oid: 'UPS-MIB::upsOutputVoltage.{#SNMPVALUE}.0'
+              key: 'upsOutputVoltage.[{#SNMPVALUE}]'
+              delay: '60'
+              history: 14d
+              units: 'RMS Amp'
+              tags:
+                - tag: Application
+                  value: OutputLine
+          graph_prototypes:
+            - uuid: c9c8d6b7b57f4561b808bfc4d58a6b07
+              name: 'UPS Output Line {#SNMPINDEX}  Load in %'
+              ymin_type_1: FIXED
+              graph_items:
+                - color: 1A7C11
+                  item:
+                    host: 'Delta UPS SNMP QWEN ENRICHED'
+                    key: 'upsOutputPercentLoad.[{#SNMPVALUE}]'
+      tags:
+        - tag: class
+          value: hardware
+        - tag: target
+          value: 'delta UPS'
+        - tag: target
+          value: insightpower
+      macros:
+        - macro: '{$BATTERY.CHARGE.CRIT}'
+          value: '20'
+          description: 'Umbral crítico para carga de batería (%)'
+        - macro: '{$BATTERY.CHARGE.WARN}'
+          value: '50'
+          description: 'Umbral de advertencia para carga de batería (%)'
+        - macro: '{$BATTERY.TEMP.CRIT}'
+          value: '50'
+          description: 'Umbral crítico para temperatura de batería (°C)'
+        - macro: '{$BATTERY.TEMP.WARN}'
+          value: '40'
+          description: 'Umbral de advertencia para temperatura de batería (°C)'
+        - macro: '{$BYPASS.VOLTAGE.HIGH.WARN}'
+          value: '255'
+          description: 'Umbral alto de advertencia para voltaje de bypass (V)'
+        - macro: '{$BYPASS.VOLTAGE.LOW.WARN}'
+          value: '199'
+          description: 'Umbral bajo de advertencia para voltaje de bypass (V)'
+        - macro: '{$ENV.HUMIDITY.CRIT}'
+          value: '90'
+          description: 'Umbral crítico para humedad ambiente (%)'
+        - macro: '{$ENV.HUMIDITY.WARN}'
+          value: '79'
+          description: 'Umbral de advertencia para humedad ambiente (%)'
+        - macro: '{$ENV.TEMP.CRIT}'
+          value: '35'
+          description: 'Umbral crítico para temperatura ambiente (°C)'
+        - macro: '{$ENV.TEMP.WARN}'
+          value: '30'
+          description: 'Umbral de advertencia para temperatura ambiente (°C)'
+        - macro: '{$INPUT.VOLTAGE.HIGH.WARN}'
+          value: '260'
+          description: 'Umbral alto de advertencia para voltaje de entrada (V)'
+        - macro: '{$INPUT.VOLTAGE.LOW.WARN}'
+          value: '200'
+          description: 'Umbral bajo de advertencia para voltaje de entrada (V)'
+        - macro: '{$OUTPUT.LOAD.HIGH}'
+          value: '90'
+          description: 'Umbral de alta carga de salida (%)'
+        - macro: '{$OUTPUT.LOAD.MED}'
+          value: '70'
+          description: 'Umbral de carga media de salida (%)'
+        - macro: '{$OUTPUT.VOLTAGE.HIGH.WARN}'
+          value: '260'
+          description: 'Umbral alto de advertencia para voltaje de salida (V)'
+        - macro: '{$OUTPUT.VOLTAGE.LOW.WARN}'
+          value: '200'
+          description: 'Umbral bajo de advertencia para voltaje de salida (V)'
+        - macro: '{$SNMP_COMMUNITY}'
+          value: public
+          description: 'Adaptar al community de tu ups'
+        - macro: '{$TEMP.CRIT}'
+          value: '45'
+          description: 'Umbral crítico para temperatura interna (°C)'
+        - macro: '{$TEMP.WARN}'
+          value: '35'
+          description: 'Umbral de advertencia para temperatura interna (°C)'
+      dashboards:
+        - uuid: 251ba490e7e946d1aaa1c6e7c1195120
+          name: 'UPS Overview'
+          pages:
+            - widgets:
+                - type: gauge
+                  width: '18'
+                  height: '5'
+                  fields:
+                    - type: ITEM
+                      name: itemid.0
+                      value:
+                        host: 'Delta UPS SNMP QWEN ENRICHED'
+                        key: upsEstimatedChargeRemaining
+                    - type: STRING
+                      name: max
+                      value: '100'
+                    - type: STRING
+                      name: min
+                      value: '0'
+                    - type: INTEGER
+                      name: rf_rate
+                      value: '900'
+                    - type: INTEGER
+                      name: show.0
+                      value: '1'
+                    - type: INTEGER
+                      name: show.1
+                      value: '2'
+                    - type: INTEGER
+                      name: show.2
+                      value: '3'
+                    - type: INTEGER
+                      name: show.3
+                      value: '4'
+                    - type: INTEGER
+                      name: show.4
+                      value: '5'
+                    - type: STRING
+                      name: thresholds.0.color
+                      value: C62828
+                    - type: STRING
+                      name: thresholds.0.threshold
+                      value: '15'
+                    - type: STRING
+                      name: thresholds.1.color
+                      value: FF5722
+                    - type: STRING
+                      name: thresholds.1.threshold
+                      value: '30'
+                    - type: STRING
+                      name: thresholds.2.color
+                      value: FFB300
+                    - type: STRING
+                      name: thresholds.2.threshold
+                      value: '50'
+                    - type: STRING
+                      name: thresholds.3.color
+                      value: 26C6DA
+                    - type: STRING
+                      name: thresholds.3.threshold
+                      value: '75'
+                    - type: STRING
+                      name: thresholds.4.color
+                      value: 43A047
+                    - type: STRING
+                      name: thresholds.4.threshold
+                      value: '100'
+                    - type: INTEGER
+                      name: th_show_labels
+                      value: '1'
+                - type: graphprototype
+                  'y': '5'
+                  width: '36'
+                  height: '5'
+                  fields:
+                    - type: INTEGER
+                      name: columns
+                      value: '1'
+                    - type: GRAPH_PROTOTYPE
+                      name: graphid.0
+                      value:
+                        host: 'Delta UPS SNMP QWEN ENRICHED'
+                        name: 'UPS Output Line {#SNMPINDEX}  Load in %'
+                    - type: STRING
+                      name: reference
+                      value: AAAAB
+                - type: clock
+                  x: '18'
+                  width: '9'
+                  fields:
+                    - type: INTEGER
+                      name: clock_type
+                      value: '1'
+                    - type: INTEGER
+                      name: show.0
+                      value: '1'
+                    - type: INTEGER
+                      name: show.1
+                      value: '2'
+                    - type: INTEGER
+                      name: show.2
+                      value: '3'
+                - type: item
+                  name: 'Estimated Baterry Runtime'
+                  x: '18'
+                  'y': '2'
+                  width: '18'
+                  height: '3'
+                  fields:
+                    - type: ITEM
+                      name: itemid.0
+                      value:
+                        host: 'Delta UPS SNMP QWEN ENRICHED'
+                        key: dupsBatteryEstimatedTime
+                    - type: INTEGER
+                      name: show.0
+                      value: '1'
+                    - type: INTEGER
+                      name: show.1
+                      value: '2'
+                    - type: INTEGER
+                      name: show.2
+                      value: '4'
+                    - type: INTEGER
+                      name: show.3
+                      value: '5'
+                    - type: STRING
+                      name: thresholds.0.color
+                      value: E65660
+                    - type: STRING
+                      name: thresholds.0.threshold
+                      value: '5'
+                    - type: STRING
+                      name: thresholds.1.color
+                      value: FCCB1D
+                    - type: STRING
+                      name: thresholds.1.threshold
+                      value: '10'
+                    - type: STRING
+                      name: thresholds.2.color
+                      value: 3BC97D
+                    - type: STRING
+                      name: thresholds.2.threshold
+                      value: '30'
+                    - type: STRING
+                      name: units
+                      value: m
+                - type: item
+                  name: 'Baterry Status'
+                  x: '27'
+                  width: '9'
+                  fields:
+                    - type: ITEM
+                      name: itemid.0
+                      value:
+                        host: 'Delta UPS SNMP QWEN ENRICHED'
+                        key: dupsBatteryStatus
+                    - type: INTEGER
+                      name: show.0
+                      value: '1'
+                    - type: INTEGER
+                      name: show.1
+                      value: '2'
+                    - type: INTEGER
+                      name: show.2
+                      value: '4'
+                    - type: INTEGER
+                      name: show.3
+                      value: '5'
+                    - type: STRING
+                      name: thresholds.0.color
+                      value: E65660
+                    - type: STRING
+                      name: thresholds.0.threshold
+                      value: '5'
+                    - type: STRING
+                      name: thresholds.1.color
+                      value: FCCB1D
+                    - type: STRING
+                      name: thresholds.1.threshold
+                      value: '10'
+                    - type: STRING
+                      name: thresholds.2.color
+                      value: 3BC97D
+                    - type: STRING
+                      name: thresholds.2.threshold
+                      value: '30'
+                    - type: STRING
+                      name: units
+                      value: m
+                - type: honeycomb
+                  name: 'Battery condition'
+                  x: '36'
+                  width: '13'
+                  height: '5'
+                  fields:
+                    - type: STRING
+                      name: items.0
+                      value: 'UPS Battery Status'
+                    - type: STRING
+                      name: reference
+                      value: AVOKL
+                    - type: INTEGER
+                      name: rf_rate
+                      value: '900'
+                    - type: STRING
+                      name: thresholds.0.color
+                      value: FF7043
+                    - type: STRING
+                      name: thresholds.0.threshold
+                      value: '1'
+                    - type: STRING
+                      name: thresholds.1.color
+                      value: 3BC97D
+                    - type: STRING
+                      name: thresholds.1.threshold
+                      value: '2'
+                    - type: STRING
+                      name: thresholds.2.color
+                      value: FCCB1D
+                    - type: STRING
+                      name: thresholds.2.threshold
+                      value: '3'
+                    - type: STRING
+                      name: thresholds.3.color
+                      value: E65660
+                    - type: STRING
+                      name: thresholds.3.threshold
+                      value: '4'
+                - type: graph
+                  x: '36'
+                  'y': '5'
+                  width: '36'
+                  height: '5'
+                  fields:
+                    - type: GRAPH
+                      name: graphid.0
+                      value:
+                        host: 'Delta UPS SNMP QWEN ENRICHED'
+                        name: 'Battery Charge Level in %'
+                    - type: STRING
+                      name: reference
+                      value: AAAAA
+                - type: itemhistory
+                  x: '36'
+                  'y': '10'
+                  width: '36'
+                  height: '5'
+                  fields:
+                    - type: ITEM
+                      name: columns.0.itemid
+                      value:
+                        host: 'Delta UPS SNMP QWEN ENRICHED'
+                        key: upsOutputSource
+                    - type: STRING
+                      name: columns.0.name
+                      value: 'UPS Source Type'
+                    - type: STRING
+                      name: reference
+                      value: AAAAC
+                    - type: INTEGER
+                      name: show_lines
+                      value: '5'
+                    - type: INTEGER
+                      name: show_timestamp
+                      value: '1'
+                - type: honeycomb
+                  name: 'UPS source Type'
+                  x: '49'
+                  width: '13'
+                  height: '5'
+                  fields:
+                    - type: STRING
+                      name: items.0
+                      value: 'UPS Source Type'
+                    - type: STRING
+                      name: reference
+                      value: OUSEX
+                    - type: STRING
+                      name: thresholds.0.color
+                      value: 29C2FA
+                    - type: STRING
+                      name: thresholds.0.threshold
+                      value: '1'
+                    - type: STRING
+                      name: thresholds.1.color
+                      value: B71C1C
+                    - type: STRING
+                      name: thresholds.1.threshold
+                      value: '2'
+                    - type: STRING
+                      name: thresholds.2.color
+                      value: 3BC97D
+                    - type: STRING
+                      name: thresholds.2.threshold
+                      value: '3'
+                    - type: STRING
+                      name: thresholds.3.color
+                      value: E65660
+                    - type: STRING
+                      name: thresholds.3.threshold
+                      value: '4'
+                    - type: STRING
+                      name: thresholds.4.color
+                      value: FCCB1D
+                    - type: STRING
+                      name: thresholds.4.threshold
+                      value: '5'
+                    - type: STRING
+                      name: thresholds.5.color
+                      value: FFEB3B
+                    - type: STRING
+                      name: thresholds.5.threshold
+                      value: '6'
+                    - type: STRING
+                      name: thresholds.6.color
+                      value: 19D0D7
+                    - type: STRING
+                      name: thresholds.6.threshold
+                      value: '7'
+                - type: honeycomb
+                  name: 'Baterry Charge Status'
+                  x: '62'
+                  width: '10'
+                  height: '5'
+                  fields:
+                    - type: STRING
+                      name: items.0
+                      value: 'Battery Charge Status'
+                    - type: STRING
+                      name: reference
+                      value: NNIHU
+                    - type: STRING
+                      name: thresholds.0.color
+                      value: FF5722
+                    - type: STRING
+                      name: thresholds.0.threshold
+                      value: '0'
+                    - type: STRING
+                      name: thresholds.1.color
+                      value: FCCB1D
+                    - type: STRING
+                      name: thresholds.1.threshold
+                      value: '1'
+                    - type: STRING
+                      name: thresholds.2.color
+                      value: 3BC97D
+                    - type: STRING
+                      name: thresholds.2.threshold
+                      value: '2'
+                    - type: STRING
+                      name: thresholds.3.color
+                      value: E65660
+                    - type: STRING
+                      name: thresholds.3.threshold
+                      value: '3'
+      valuemaps:
+        - uuid: e2ae60981e0145cbb448daff5fc0102a
+          name: 'Delta Alarm Status'
+          mappings:
+            - value: '1'
+              newvalue: Normal
+            - value: '2'
+              newvalue: Alarm
+        - uuid: 781dde00cab240e09192d7fe031c916d
+          name: 'Delta Battery Charge'
+          mappings:
+            - value: '1'
+              newvalue: Unknown
+            - value: '2'
+              newvalue: Charged
+            - value: '3'
+              newvalue: Discharging
+            - value: '4'
+              newvalue: Charging
+            - value: '5'
+              newvalue: Low
+            - value: '6'
+              newvalue: InFaultCondition
+        - uuid: b53ca45025d244cea68cf575f501b708
+          name: 'Delta Battery Condition'
+          mappings:
+            - value: '1'
+              newvalue: Unknown
+            - value: '2'
+              newvalue: Ok
+            - value: '3'
+              newvalue: Bad
+        - uuid: 3bd7d0a276f64e7fa4f70d081c7676ca
+          name: 'Delta Battery Status'
+          mappings:
+            - value: '1'
+              newvalue: unknown
+            - value: '2'
+              newvalue: batteryNormal
+            - value: '3'
+              newvalue: batteryLow
+        - uuid: 2b574132fee840ad9da36b25a99b0682
+          name: 'Delta Config Buzzer Alarm'
+          mappings:
+            - value: '1'
+              newvalue: Disabled
+            - value: '2'
+              newvalue: Enabled
+        - uuid: 73aff99d142e4a258eff0e7bff15a8b7
+          name: 'Delta Config Buzzer State'
+          mappings:
+            - value: '1'
+              newvalue: Disabled
+            - value: '2'
+              newvalue: Enabled
+            - value: '3'
+              newvalue: Muted
+        - uuid: c6f4a7042fd043229cda0d741e0fc7d1
+          name: 'Delta Config Sensitivity'
+          mappings:
+            - value: '1'
+              newvalue: Normal
+            - value: '2'
+              newvalue: High
+            - value: '3'
+              newvalue: Low
+        - uuid: 7d0f6ad51eb74b049d51c1d4e3b52969
+          name: 'Delta Env Relay Status'
+          mappings:
+            - value: '1'
+              newvalue: Normal
+            - value: '2'
+              newvalue: Open
+            - value: '3'
+              newvalue: Closed
+        - uuid: a147f04cc65f4b15b666713fb7c3b614
+          name: 'Delta Source Type'
+          mappings:
+            - value: '0'
+              newvalue: unknown
+            - value: '2'
+              newvalue: none
+            - value: '3'
+              newvalue: normal
+            - value: '4'
+              newvalue: bypass
+            - value: '5'
+              newvalue: battery
+            - value: '6'
+              newvalue: booster
+            - value: '7'
+              newvalue: reducer
+        - uuid: f3ab15be12e247a9accb14d7a866af52
+          name: 'Delta Test Results Summary'
+          mappings:
+            - value: '1'
+              newvalue: Unknown
+            - value: '2'
+              newvalue: DoneAndOk
+            - value: '3'
+              newvalue: DoneAndError
+            - value: '4'
+              newvalue: InProgress
+            - value: '5'
+              newvalue: NotDoneNoPower
+            - value: '6'
+              newvalue: NotDoneUpsShutdown
+        - uuid: 4561852e61f94b44a542d1d121a5b458
+          name: 'Delta Test Type'
+          mappings:
+            - value: '1'
+              newvalue: Unknown
+            - value: '2'
+              newvalue: None
+            - value: '3'
+              newvalue: Abort
+            - value: '4'
+              newvalue: Scheduled
+            - value: '5'
+              newvalue: OnCommand
+            - value: '6'
+              newvalue: Automatic
+        - uuid: d33bb45211cf4c1792967306f3a1d516
+          name: 'Delta UPS Type'
+          mappings:
+            - value: '1'
+              newvalue: Offline
+            - value: '2'
+              newvalue: LineInteractive
+            - value: '3'
+              newvalue: Online
+        - uuid: 0859273cc0a149caab9ec0f5728c499b
+          name: 'Delta Warn Status'
+          mappings:
+            - value: '1'
+              newvalue: Normal
+            - value: '2'
+              newvalue: Warning
+        - uuid: 6c91708bda794d34b3c0d7be8752441b
+          name: 'Service state'
+          mappings:
+            - value: '0'
+              newvalue: Down
+            - value: '1'
+              newvalue: Up
+  graphs:
+    - uuid: 77e20131dbc54d62987ef41915ceb669
+      name: 'Battery Charge Level in %'
+      graph_items:
+        - color: 1A7C11
+          item:
+            host: 'Delta UPS SNMP QWEN ENRICHED'
+            key: upsEstimatedChargeRemaining
+    - uuid: dc0515044cf8448599725cff480b087c
+      name: Uptime
+      graph_items:
+        - color: '000088'
+          item:
+            host: 'Delta UPS SNMP QWEN ENRICHED'
+            key: sysUpTime.2
