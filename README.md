@@ -13,9 +13,9 @@ It collects metrics across various aspects of the UPS including power input/outp
 
 - npirela
 - Qwen Ai
-#MOD FROM 
-SIM template
-https://github.com/zabbix/community-templates/tree/main/Power_(UPS)/template_delta_ups_snmpv1/6.0
+- MOD FROM 
+ SIM template
+ https://github.com/zabbix/community-templates/tree/main/Power_(UPS)/template_delta_ups_snmpv1/6.0
 
 ## Template
 
@@ -143,8 +143,8 @@ https://github.com/zabbix/community-templates/tree/main/Power_(UPS)/template_del
 
 - DeltaUPS-MIB
 - UPS-MIB (if implemented by device)
-- SNMPV2-SMI
--RFC153
+- SNMPv2-MIB
+- RFC1213-MIB
 ## Template Version
 
 1.0
